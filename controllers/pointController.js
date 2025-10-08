@@ -24,7 +24,8 @@ export const createPointIncident = async (req, res) => {
     // Construire le nom du point
     //const uniqueId = generateId(5);
     //const pointName = `pi-${section.name}-${uniqueId}`;
-
+    const latNum = parseFloat(latitude);
+    const lonNum = parseFloat(longitude);
     const newPoint = new Point({
       name,
       section_id,
@@ -35,6 +36,10 @@ export const createPointIncident = async (req, res) => {
       status: 'active',
       nature: 'incident',
       user_id,
+      location: {
+        type: name,
+        coordinates: [lonNum, latNum], // IMPORTANT: [longitude, latitude]
+      },
 
     });
     await newPoint.save();
@@ -189,3 +194,109 @@ export const deletePoint = async (req, res) => {
   await Point.findByIdAndDelete(req.params.id);
   res.status(204).end();
 };
+
+export const getIncidentsTotal = async (req, res) => {
+  try {
+    const ptnature = "incident";
+    const total = await Point.countDocuments({ nature: ptnature });
+
+    res.json({ total });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+export const getIncidentsActive = async (req, res) => {
+  try {
+    const ptnature = "incident";
+    const status = "active";
+    const total = await Point.countDocuments({ nature: ptnature, status: status });
+
+    res.json({ total, status });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+export const getIncidentsResolved = async (req, res) => {
+  try {
+    const ptnature = "incident";
+    const status = "archived";
+    const total = await Point.countDocuments({ nature: ptnature, status: status });
+
+    res.json({ total, status });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+export const getIncidentPending = async (req, res) => {
+  try {
+    const ptnature = "incident";
+    const status = "pending";
+    const total = await Point.countDocuments({ nature: ptnature, status: status });
+
+    res.json({ total, status });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+export const getIncidentInProgress = async (req, res) => {
+  try {
+    const ptnature = "incident";
+    const status = "in progress";
+    const total = await Point.countDocuments({ nature: ptnature, status: status });
+
+    res.json({ total, status });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+
+
+export const getIncidentsBySection = async (req, res) => {
+  try {
+    const ptnature = "incident";
+    const sectionId = req.params.sectionId;
+    const incidents = await Point.find({ nature: ptnature, section_id: sectionId });
+
+    res.json(incidents);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+export const getIncidentsByUser = async (req, res) => {
+  try {
+    const ptnature = "incident";
+    const userId = req.params.userId;
+    const incidents = await Point.find({ nature: ptnature, user_id: userId });
+
+    res.json(incidents);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur", error: err.message });
+  }
+};
+
+export const getClosestPoints = async (req, res) => {
+  try {
+    const incidentId = req.params.incidentId;
+    const incident = await Point.findById(incidentId);
+    if (!incident) return res.status(404).json({ message: "Incident not found" });
+    if (!incident.location || !incident.location.coordinates) {
+     return res.status(400).json({ message: "Ce point incident n’a pas de coordonnées géospatiales." });
+    }
+    const [lon, lat] = incident.location.coordinates;
+
+    const points = await Point.find({
+      _id: { $ne: incidentId }, // Exclude the incident itself
+      //query: { nature: { $ne: "incident" } }, 
+      location: {
+        $near: {  
+          $geometry: { type: "Point", coordinates: [lon, lat] },
+          $maxDistance: 5000 // 5 km radius
+        }
+      }
+    }).limit(10); // Limit to 10 closest points
+    res.json(points);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+

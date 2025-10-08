@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"latitude":{"$numberInt":"1"},"longitude":{"$numberInt":"1"}},"name":"latitude_1_longitude_1","background":true}],"uuid":"316afe51cb40446395d94f3c2506e5d7","collectionName":"points","type":"collection"}

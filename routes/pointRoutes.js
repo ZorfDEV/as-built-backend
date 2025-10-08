@@ -8,7 +8,15 @@ import {
   createPointIncident,
   getPointById,
   updatePoint,
-  deletePoint
+  deletePoint,
+  getIncidentsTotal,
+  getIncidentsActive,
+  getIncidentsResolved,
+  getIncidentPending,
+  getIncidentInProgress,
+  getIncidentsBySection,
+  getIncidentsByUser,
+  getClosestPoints
 } from '../controllers/pointController.js';
 
 const router = express.Router();
@@ -31,7 +39,13 @@ router.get('/pointsofcup', protect, getPointsBySectionPi);
 router.get('/:id', protect, getPointById);
 router.put('/:id', protect,admin, validatePoint, updatePoint);
 router.delete('/:id', protect,admin, deletePoint);
-
-    
+router.get("/incidents/total",protect, getIncidentsTotal);
+router.get("/incidents/active",protect, getIncidentsActive);
+router.get("/incidents/resolved",protect, getIncidentsResolved);
+router.get("/incidents/pending",protect, getIncidentPending);
+router.get("/incidents/inprogress",protect, getIncidentInProgress);
+router.get("/incidents/section/:sectionId", protect, getIncidentsBySection);
+router.get("/incidents/user/:userId", protect, getIncidentsByUser);
+router.get("/closest/:incidentId", protect, getClosestPoints);
 
 export default router;
