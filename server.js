@@ -21,7 +21,8 @@ app.use(express.json());
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', routes);
 //app.use('/auth', authRoutes);
-app.use('/api/upload', uploadRoutes);
+//app.use('/api/upload', uploadRoutes);
+app.use('/upload', uploadRoutes);
 
 mongoose.connect('mongodb://localhost:27017/fiberdb', {
   useNewUrlParser: true,

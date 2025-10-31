@@ -3,7 +3,6 @@ import express from 'express';
 import pointRoutes from './pointRoutes.js';
 import sectionRoutes from './sectionRoutes.js';
 import marqueurRoutes from './marqueurRoutes.js';
-import upload from '../utils/uploadFile.js';
 import uploadRoutes from './uploadRoutes.js';
 import authRoutes from './authRoutes.js';
 

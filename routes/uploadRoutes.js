@@ -10,7 +10,17 @@ import { createPointFromDMS } from '../controllers/pointController.js';
 const router = express.Router();
 const upload = multer({ dest: 'uploads/filePoints' });
 
-router.post('/xlsx', upload.single('file'),createPointFromDMS );
+router.post('/xlsx', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+  try {
+    await createPointFromDMS(req, res);
+  } catch (error) {
+    console.error('Error processing Excel file:', error);
+    res.status(500).json({ message: 'Error processing Excel file' });
+  }
+});
 
 router.post('/kmz', protect, upload.single('file'), async (req, res) => {
   const zip = await JSZip.loadAsync(req.file.buffer || fs.readFileSync(req.file.path));

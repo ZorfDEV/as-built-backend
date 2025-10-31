@@ -37,7 +37,7 @@ export const createPointIncident = async (req, res) => {
       nature: 'incident',
       user_id,
       location: {
-        type: name,
+        type: 'Point',
         coordinates: [lonNum, latNum], // IMPORTANT: [longitude, latitude]
       },
 
@@ -58,6 +58,19 @@ export const getAllPoints = async (req, res) => {
   res.json(points, marqueurs , sections);
 };
 
+export const getPointsMap = async (req, res) => {
+  try {
+    const points = await Point.find({ status: { $ne: "archived" } }).populate('section_id').populate('marqueur_id').sort({ createdAt: -1 });
+    const marqueurs = points.map(p => p.marqueur_id).filter(Boolean);
+  const sections = points.map(p => p.section_id).filter(Boolean);
+    res.json(points, marqueurs, sections );
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Erreur serveur", error: err.message });
+  }
+};
+
+
+// Récupérer les points de nature 'incident'
 export const getPointsBySectionPi = async (req, res) => {
   const ptnature = 'incident'; //req.params.sectionId;
   if (!ptnature) {
@@ -93,6 +106,7 @@ const convertDMS = (dmsString) => {
     return { lat, lng };
   };
 
+// Créer un point à partir des coordonnées DMS dans un fichier Excel
 export const createPointFromDMS = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
@@ -107,7 +121,9 @@ export const createPointFromDMS = async (req, res) => {
         return res.status(400).json({ message: 'No data found in the file' });
       }
       // Validate that required fields are present in the rows
-      const requiredFields = ['name', 'latitude', 'longitude', 'description', 'section_id', 'marqueur_id'];
+      const requiredFields = ['name', 'latitude', 'longitude', 'description', 'section_id', 'marqueur_id', 'user_id',
+        'status', 'nature'
+      ];
       for (const row of rows) { 
         for (const field of requiredFields) {
           if (!row[field]) {
@@ -137,7 +153,10 @@ export const createPointFromDMS = async (req, res) => {
         longitude: parseFloat(lng),
         description: row.description || '',
         section_id: row.section_id,
-        marqueur_id: row.marqueur_id
+        marqueur_id: row.marqueur_id,
+        status: row.status || 'inactive',
+        nature: row.nature || 'pt-asbuilt',
+        user_id: row.user_id,
       };
 })
 if (validated.length === 0) {
@@ -151,23 +170,25 @@ if (validated.length === 0) {
         return res.status(400).json({ message: 'Aucune ligne valide trouvée dans le fichier' });
       }
       // Insérer les points valides dans la base de données
+      const latNum = validRows[0].latitude;
+      const lonNum = validRows[0].longitude;
+
       const points = await Point.insertMany(validRows.map(row => ({
         name: row.name,
         latitude: row.latitude,
         longitude: row.longitude,
         description: row.description,
         section_id: row.section_id,
-        marqueur_id: row.marqueur_id
+        marqueur_id: row.marqueur_id,
+        status: row.status || 'inactive',
+        nature: row.nature || 'pt-asbuilt',
+        user_id: row.user_id,
+        location: {
+          type: 'Point',
+          coordinates: [row.longitude, row.latitude],
+      },
       })));
-    /*  const points = await Point.insertMany(rows.map(row => ({  
-        
-        name: row.name,
-        latitude:lat,
-        longitude:lng,
-        description: row.description,
-        section_id: row.section_id,
-        marqueur_id: row.marqueur_id
-      })));*/
+    
       res.status(201).json(points);
     } catch (error) {
       console.error('Error processing Excel file:', error);
@@ -276,27 +297,91 @@ export const getIncidentsByUser = async (req, res) => {
 
 export const getClosestPoints = async (req, res) => {
   try {
-    const incidentId = req.params.incidentId;
+    const { incidentId } = req.params;
     const incident = await Point.findById(incidentId);
-    if (!incident) return res.status(404).json({ message: "Incident not found" });
-    if (!incident.location || !incident.location.coordinates) {
-     return res.status(400).json({ message: "Ce point incident n’a pas de coordonnées géospatiales." });
+
+    // Vérifications de base
+    if (!incident) {
+      return res.status(404).json({
+        success: false,
+        message: "Incident non trouvé.",
+        points: [],
+        count: 0
+      });
     }
+
+    if (!incident.location?.coordinates) {
+      return res.status(400).json({
+        success: false,
+        message: "Ce point incident n’a pas de coordonnées géospatiales.",
+        points: [],
+        count: 0
+      });
+    }
+
     const [lon, lat] = incident.location.coordinates;
 
+    // Requête des points les plus proches (exclut l’incident)
     const points = await Point.find({
-      _id: { $ne: incidentId }, // Exclude the incident itself
-      //query: { nature: { $ne: "incident" } }, 
+      _id: { $ne: incidentId },
       location: {
-        $near: {  
+        $near: {
           $geometry: { type: "Point", coordinates: [lon, lat] },
-          $maxDistance: 5000 // 5 km radius
+          $maxDistance: 5000 // 5 km
         }
       }
-    }).limit(10); // Limit to 10 closest points
-    res.json(points);
+    }).limit(10);
+
+    // Réponse cohérente (même structure dans tous les cas)
+    return res.status(200).json({
+      success: true,
+      message:
+        points.length === 0
+          ? "PI isolé dans un rayon de 5 km."
+          : `${points.length} point(s) approximité(s) du PI dans un rayon de 5 km.`,
+      points,
+      count: points.length,
+      incident: {
+        id: incident._id,
+        name: incident.name,
+        coordinates: incident.location.coordinates
+      }
+    });
   } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Erreur dans getClosestPoints:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la récupération des points.",
+      error: err.message,
+      points: [],
+      count: 0
+    });
+  }
+};
+
+
+// suppression en masse des points
+export const deleteMultiplePoints = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "Aucun ID fourni." });
+    }
+
+    const result = await Point.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Aucun point trouvé à supprimer." });
+    }
+
+    res.status(200).json({
+      message: `✅ ${result.deletedCount} point(s) supprimé(s) avec succès.`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (err) {
+    console.error("Erreur lors de la suppression multiple :", err);
+    res.status(500).json({ message: "Erreur serveur.", error: err.message });
   }
 };
 
