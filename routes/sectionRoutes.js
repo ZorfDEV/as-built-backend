@@ -9,7 +9,8 @@ import {
   createSection,
   getSectionById,
   updateSection,
-  deleteSection
+  deleteSection,
+  deleteMultipleSections
 } from '../controllers/sectionController.js';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get('/', protect, getAllSections);
 router.post('/', protect, validateSection, createSection);
 router.get('/:id', protect, getSectionById);
 router.put('/:id',protect,admin, validateSection, updateSection);
+router.delete("/deletemultiple", protect, admin, deleteMultipleSections);
 router.delete('/:id',protect, admin, deleteSection);
 router.get('/points',protect, getSectionsWithPoints);
 

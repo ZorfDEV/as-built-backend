@@ -89,3 +89,26 @@ export const getSectionsByUserId = async (req, res) => {
   const sections = await Section.find({ user_id: req.user.id });
   res.json(sections);
 };
+
+export const deleteMultipleSections = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "Aucun ID fourni." });
+    }
+
+    const result = await Section.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Aucune section trouvée à supprimer." });
+    }
+
+    res.status(200).json({
+      message: `✅ ${result.deletedCount} section(s) supprimée(s) avec succès.`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (err) {
+    console.error("Erreur lors de la suppression multiple :", err);
+    res.status(500).json({ message: "Erreur serveur.", error: err.message });
+  }
+};

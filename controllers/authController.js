@@ -105,46 +105,6 @@ export async function loginUser(req, res, next) {
   }
 }
 
-
-/*export async function loginUser(req, res, next) {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email et mot de passe requis.' });
-    }
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json( {message: 'Utilisateur non trouvé.'});
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      console.log('Body reçu:', req.body);
-
-      return res.status(401).json({ message: 'Mot de passe incorrect.', email,password });
-
-    }
-
-   const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1d' });
-
-    res.status(200).json({
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-      token
-    });
-  } catch (err) {
-
-    next(err);
-    //console.error('Erreur lors de la connexion:', err);
-    //res.status(500).json({ message: 'Erreur serveur' });
-  }
-}*/
-
 // Obtenir les infos de l'utilisateur connecté
 export async function getMe(req, res, next) {
   try {
@@ -191,3 +151,76 @@ export async function updateMe(req, res, next) {
   } 
   
 }
+// voir un utilisateur par son id (admin uniquement)
+export async function getUserById(req, res, next) {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Mettre à jour le rôle d'un utilisateur (admin uniquement)
+export async function updateUserRole(req, res, next) {
+  try {
+    const { role } = req.body;
+    const userId = req.params.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+    }
+
+    user.role = role || user.role;
+
+    await user.save();
+
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      isActive: user.isActive,
+      role: user.role
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+export async function deleteUser(req, res, next) {
+  try {
+    const userId = req.params.id; 
+    await User.findByIdAndDelete(userId);
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+    console.error("Erreur lors de la suppression multiple :", err);
+    res.status(500).json({ message: "Erreur serveur lors de la suppression." });
+  }
+}
+
+export async function deleteMultipleUsers(req, res, next) {
+  try {
+    const { ids } = req.body; // Attendre un tableau d'IDs dans le corps de la requête
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "Aucun ID fourni." });
+    } 
+    const result = await User.deleteMany({ _id: { $in: ids } });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Aucun utilisateur trouvé à supprimer." });
+    }
+    res.status(200).json({
+      message: `✅ ${result.deletedCount} utilisateur(s) supprimé(s) avec succès.`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (err) {
+    next(err);
+  } 
+}
+
+    

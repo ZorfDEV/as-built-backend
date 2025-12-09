@@ -49,3 +49,21 @@ export const deleteMarqueur = async (req, res) => {
   await Marqueur.findByIdAndDelete(req.params.id);
   res.status(204).end();
 };
+export const deleteMultipleMarqueurs = async (req, res) => {
+  const { ids } = req.body; // Attendre un tableau d'IDs dans le corps de la requête
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: "Aucun ID fourni." });
+  }
+
+  const result = await Marqueur.deleteMany({ _id: { $in: ids } });
+
+  if (result.deletedCount === 0) {
+    return res.status(404).json({ message: "Aucun marqueur trouvé à supprimer." });
+  }
+
+  res.status(200).json({
+    message: `✅ ${result.deletedCount} marqueur(s) supprimé(s) avec succès.`,
+    deletedCount: result.deletedCount,
+  });
+};

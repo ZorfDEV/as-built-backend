@@ -31,7 +31,8 @@ const validatePoint = [
   body('longitude').isFloat().withMessage('Longitude invalide'),
   body('description').notEmpty().withMessage('La description est requise'),
   body('section_id').notEmpty().withMessage('Section requise'),
-  body('marqueur_id').notEmpty().withMessage('Marqueur requis')
+  body('marqueur_id').notEmpty().withMessage('Marqueur requis'),
+  body('createdAt').notEmpty().withMessage('Créé par est requis')
 ];
 // route pour les points protégées par l'authentification
 router.get('/', protect, getAllPoints);

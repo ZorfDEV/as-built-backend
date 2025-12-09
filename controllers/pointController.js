@@ -52,7 +52,9 @@ export const createPointIncident = async (req, res) => {
 
 
 export const getAllPoints = async (req, res) => {
-  const points = await Point.find().populate('section_id').populate('marqueur_id').sort({ createdAt: -1 });
+
+  const ptasbuilt = 'pt-asbuilt';
+  const points = await Point.find({ nature: ptasbuilt }).populate('section_id').populate('marqueur_id').sort({ createdAt: -1 });
   const marqueurs = points.map(p => p.marqueur_id).filter(Boolean);
   const sections = points.map(p => p.section_id).filter(Boolean);
   res.json(points, marqueurs , sections);
@@ -197,24 +199,31 @@ if (validated.length === 0) {
   
 }
 
-
+// Récupérer un point par ID
 export const getPointById = async (req, res) => {
   const point = await Point.findById(req.params.id).populate('section_id').populate('marqueur_id');
   if (!point) return res.status(404).json({ error: 'Point not found' });
   res.json(point);
 };
 
+// Mettre à jour un point par ID
+
 export const updatePoint = async (req, res) => {
+ // const createdAt = req.body.createdAt;
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
   const updated = await Point.findByIdAndUpdate(req.params.id, req.body, { new: true });
   res.json(updated);
 };
 
+// Supprimer un point par ID
+
 export const deletePoint = async (req, res) => {
   await Point.findByIdAndDelete(req.params.id);
   res.status(204).end();
 };
+
+
 
 export const getIncidentsTotal = async (req, res) => {
   try {
@@ -331,8 +340,6 @@ export const getClosestPoints = async (req, res) => {
         }
       }
     }).limit(10);
-
-    // Réponse cohérente (même structure dans tous les cas)
     return res.status(200).json({
       success: true,
       message:

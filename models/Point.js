@@ -1,4 +1,3 @@
-// File: /backend/models/Point.js
 import mongoose from 'mongoose';
 
 const PointSchema = new mongoose.Schema({
@@ -8,22 +7,37 @@ const PointSchema = new mongoose.Schema({
   description: { type: String },
   section_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', required: true },
   marqueur_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Marqueur', required: true },
-  status: { type: String, enum: ["active", "inactive","pending","archived"], default: "inactive" },
-  nature: { type: String, enum: ["pt-asbuilt", "incident","maintenance"], default: "pt-asbuilt" },
-  location: {
-  type: { type: String, enum: ["Point"], default: "Point" },
-  coordinates: {
-    type: [Number], // [longitude, latitude]
-    required: true,
+  status: { 
+    type: String, 
+    enum: ["active", "inactive","pending","archived"], 
+    default: "inactive" 
   },
-},
+  nature: { 
+    type: String, 
+    enum: ["pt-asbuilt", "incident","maintenance"], 
+    default: "pt-asbuilt" 
+  },
+  location: {
+    type: { type: String, enum: ["Point"], default: "Point" },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: true,
+    },
+  },
+
+  // dates totalement contrôlables
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  user_id:{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
-}, { timestamps: true });
+
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+});
+
+// Mise à jour auto de updatedAt
+PointSchema.pre("save", function (next) {
+  this.updatedAt = new Date();
+  next();
+});
 
 PointSchema.index({ location: "2dsphere" });
-
-//PointSchema.index({ latitude: 1, longitude: 1, location: "2dsphere" });
 
 export default mongoose.model('Point', PointSchema);

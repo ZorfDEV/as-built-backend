@@ -1,6 +1,8 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { registerUser, loginUser,updateMe,getMe,getAllUsers } from '../controllers/authController.js';
+import { registerUser, loginUser,
+  updateMe,getMe,
+  getAllUsers,getUserById,deleteUser,deleteMultipleUsers } from '../controllers/authController.js';
 import protect, { admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -21,7 +23,10 @@ router.get('/logout', (req, res) => {
   res.clearCookie('token');
   res.status(200).json({ message: 'Déconnexion réussie' });
 });
+router.get('/users/:id', protect, admin, getUserById);
 router.get('/me', protect, getMe);
 router.put('/me', protect, validateUser, updateMe);
+router.delete('/deletemultiple', protect, admin, deleteMultipleUsers);
+router.delete('/me', protect, admin, deleteUser);
 
 export default router;
