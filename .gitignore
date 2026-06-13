@@ -1,0 +1,9 @@
+# Les node_modules ne doivent jamais être envoyés sur GitHub
+node_modules/
+.env
+.env.local
+.env*.local
+.next/
+dist/
+build/
+.DS_Store

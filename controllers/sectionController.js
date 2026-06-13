@@ -112,3 +112,4 @@ export const deleteMultipleSections = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur.", error: err.message });
   }
 };
+

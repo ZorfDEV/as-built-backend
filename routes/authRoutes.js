@@ -4,6 +4,7 @@ import { registerUser, loginUser,
   updateMe,getMe,
   getAllUsers,getUserById,deleteUser,deleteMultipleUsers } from '../controllers/authController.js';
 import protect, { admin } from '../middleware/auth.js';
+import upload from './../utils/uploadAvatar.js';
 
 const router = express.Router();
 
@@ -12,12 +13,12 @@ const validateUser = [
   body('email').isEmail().withMessage('Adresse email invalide'),
   body('password').isLength({ min: 8 }).withMessage('Le mot de passe doit contenir au moins 8 caractères'),
   body('role').optional().isIn(['user', 'admin']).withMessage('Le rôle doit être "user" ou "admin"'),
-  body('avatar').optional().isURL().withMessage('L\'avatar doit être une URL valide')
+ // body('avatar').optional().isURL().withMessage('L\'avatar doit être une URL valide')
 ];
 
 
 router.get('/users', protect, getAllUsers);
-router.post('/register', validateUser, registerUser);
+router.post('/register',upload.single('file'), validateUser, registerUser);
 router.post('/login', loginUser);
 router.get('/logout', (req, res) => {
   res.clearCookie('token');

@@ -14,6 +14,11 @@ const UserSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  status: {
+    type: String,
+    enum: ["actived", "pending", "inactived"],
+    default: "inactived",  
+  }
 }, { timestamps: true });
 
 UserSchema.pre('save', async function (next) {

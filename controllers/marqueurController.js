@@ -8,7 +8,7 @@ export const getAllMarqueurs = async (req, res) => {
 
 export const createMarqueur = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, description } = req.body;
 
     // Vérifie qu'un fichier a été uploadé
     if (!req.file) {
@@ -16,12 +16,13 @@ export const createMarqueur = async (req, res) => {
     }
 
     // Crée le chemin relatif vers le fichier
-    const filePath = `./uploads/ic-markers/${req.file.filename}`;
+    const filePath = `/uploads/ic-markers/${req.file.filename}`;
 
     // Crée un nouveau Marqueur
     const marqueur = new Marqueur({
       name: name,
       file: filePath,
+      description: description || '' // Ajoute la description si elle est fournie
     });
 
     // Enregistre dans la base

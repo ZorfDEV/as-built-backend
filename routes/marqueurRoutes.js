@@ -22,7 +22,7 @@ router.get('/',protect, getAllMarqueurs);
 router.post('/',protect, upload.single('file'), createMarqueur);
 //router.post('/', validateMarqueur, createMarqueur);
 router.get('/:id',protect, getMarqueurById);
-router.put('/:id', protect,admin, validateMarqueur, updateMarqueur);
+router.put('/:id', protect,admin, upload.single('file'), updateMarqueur);
 router.delete("/deletemultiple", protect, admin, deleteMultipleMarqueurs);
 router.delete('/:id', protect,admin, deleteMarqueur);
 

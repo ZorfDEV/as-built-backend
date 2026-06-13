@@ -14,14 +14,14 @@ const PointSchema = new mongoose.Schema({
   },
   nature: { 
     type: String, 
-    enum: ["pt-asbuilt", "incident","maintenance"], 
+    enum: ["pt-asbuilt", "incident","chambre","borne-réperage"], 
     default: "pt-asbuilt" 
   },
   location: {
     type: { type: String, enum: ["Point"], default: "Point" },
     coordinates: {
       type: [Number], // [longitude, latitude]
-      required: true,
+      required: false,
     },
   },
 

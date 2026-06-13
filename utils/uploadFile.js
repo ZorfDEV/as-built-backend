@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
 
 // Filtrage des fichiers SVG
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/svg+xml'];
+  const allowedTypes = ['image/svg+xml/png', 'image/svg+xml'];
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
