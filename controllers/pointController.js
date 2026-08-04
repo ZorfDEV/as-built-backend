@@ -125,19 +125,34 @@ export const createPointIncident = async (req, res) => {
     await newPoint.save();
     res.status(201).json(newPoint);
   } catch (error) {
-    console.error(error);
+    console.log(error);
     res.status(500).json({ message: "Erreur lors de la création du point" });
   }
 };
 
 
 export const getAllPoints = async (req, res) => {
-
-  //const ptasbuilt = 'pt-asbuilt';
+try {
   const points = await Point.find({ nature: { $ne: "incident" } }).populate('section_id').populate('marqueur_id').sort({ createdAt: -1 });
   const marqueurs = points.map(p => p.marqueur_id).filter(Boolean);
   const sections = points.map(p => p.section_id).filter(Boolean);
   res.json(points, marqueurs , sections);
+} catch (error) {
+  console.log("GET ALL POINTS ERROR:", error);
+  res.status(500).json({ message: "Erreur serveur" });
+}
+};
+
+// Tous pts confondus
+export const getTotalPoints = async (req, res) => {
+   try {
+  const points = await Point.find().populate('section_id').populate('marqueur_id').sort({ createdAt: -1 });
+  const marqueurs = points.map(p => p.marqueur_id).filter(Boolean);
+  const sections = points.map(p => p.section_id).filter(Boolean);
+  res.json(points, marqueurs , sections);
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Erreur serveur", error: err.message });
+  }
 };
 
 export const getPointsMap = async (req, res) => {
@@ -325,17 +340,11 @@ export const bulkCreatePoints = async (req, res) => {
   
 }
 
-// Récupérer un point par ID
-
+// Récupérer un point par publicId (résolu par le middleware)
 export const getPointById = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    if (!id) {
-      return res.status(400).json({ message: "ID manquant" });
-    }
-
-    const point = await Point.findById(id)
+    // ✅ req.resource est déjà chargé par resolveByPublicId, on populate juste les refs
+    const point = await Point.findById(req.resourceId)
       .populate("section_id")
       .populate("marqueur_id");
 
@@ -350,24 +359,29 @@ export const getPointById = async (req, res) => {
   }
 };
 
-// Update point ID
-
+// Update point (résolu par publicId)
 export const updatePoint = async (req, res) => {
- // const errors = validationResult(req);
-  //if (!errors.isEmpty()) return res.status(402).json({ errors: errors.array() });
-  if (!req.params.id) return res.status(400).json({ message: "ID manquant" });
-  const updated = await Point.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.json(updated);
+  try {
+    // ✅ req.resourceId vient du middleware resolveByPublicId
+    const updated = await Point.findByIdAndUpdate(req.resourceId, req.body, { new: true });
+    res.json(updated);
+  } catch (error) {
+    console.error("Erreur updatePoint:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 };
 
-// Delete point by ID
-
+// Delete point (résolu par publicId)
 export const deletePoint = async (req, res) => {
-  await Point.findByIdAndDelete(req.params.id);
-  res.status(204).end();
+  try {
+    // ✅ req.resourceId vient du middleware resolveByPublicId
+    await Point.findByIdAndDelete(req.resourceId);
+    res.status(204).end();
+  } catch (error) {
+    console.error("Erreur deletePoint:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 };
-
-
 
 export const getIncidentsTotal = async (req, res) => {
   try {
@@ -443,6 +457,7 @@ export const getIncidentsBySection = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 };
+
 export const getIncidentsByUser = async (req, res) => {
   try {
     const ptnature = "incident";
@@ -479,46 +494,82 @@ export const getClosestPoints = async (req, res) => {
       });
     }
 
-    const [lon, lat] = incident.location.coordinates;
+   const [lon, lat] = incident.location.coordinates;
 
-    // Requête des points les plus proches (exclut l’incident)
-    const points = await Point.find({
-      _id: { $ne: incidentId },
-      location: {
-        $near: {
-          $geometry: { type: "Point", coordinates: [lon, lat] },
-          $maxDistance: 5000 // 5 km
-        }
+// ── Étape 1 : Points dans un rayon de 5km ────────────────────────────────
+const points = await Point.find({
+  _id:      { $ne: incidentId },
+  location: {
+    $near: {
+      $geometry:    { type: "Point", coordinates: [lon, lat] },
+      $maxDistance: 5000,
+    },
+  },
+}).limit(10);
+
+// ── Étape 2 : Cherche une gare parmi les points trouvés ──────────────────
+const gareIn5km = points.find(
+  (p) => p.nature?.toLowerCase() === "gare"
+);
+
+// ── Étape 3 : Si pas de gare dans les 5km → cherche la gare la plus proche
+let nearestGare = gareIn5km ?? null;
+
+if (!gareIn5km) {
+  nearestGare = await Point.findOne({
+    _id:    { $ne: incidentId },
+    nature: { $regex: /^gare$/i }, // insensible à la casse
+    location: {
+      $near: {
+        $geometry:   { type: "Point", coordinates: [lon, lat] },
+        // Pas de $maxDistance → cherche sans limite de distance
+      },
+    },
+  });
+}
+
+// ── Étape 4 : Calcule la distance de la gare trouvée ─────────────────────
+let nearestGareDistance = null;
+
+if (nearestGare) {
+  const [gLon, gLat] = nearestGare.location.coordinates;
+  nearestGareDistance = Math.round(haversineDistance(lat, lon, gLat, gLon));
+}
+
+return res.status(200).json({
+  success: true,
+  message:
+    points.length === 0
+      ? "PI isolé dans un rayon de 5 km."
+      : `${points.length} point(s) en proximité du PI dans un rayon de 5 km.`,
+  points,
+  count:        points.length,
+  nearestGare: nearestGare
+    ? {
+        ...nearestGare.toObject(),
+        distanceMeters: nearestGareDistance,
+        distanceKm:     nearestGareDistance
+          ? (nearestGareDistance / 1000).toFixed(2)
+          : null,
+        foundIn5km: !!gareIn5km,
       }
-    }).limit(10);
-    return res.status(200).json({
-      success: true,
-      message:
-        points.length === 0
-          ? "PI isolé dans un rayon de 5 km."
-          : `${points.length} point(s) approximité(s) du PI dans un rayon de 5 km.`,
-      points,
-      count: points.length,
-      incident: {
-        id: incident._id,
-        name: incident.name,
-        coordinates: incident.location.coordinates
-      }
-    });
+    : null,
+  incident: {
+    id:          incident._id,
+    name:        incident.name,
+    coordinates: incident.location.coordinates,
+  },
+});
   } catch (err) {
-    console.error("Erreur dans getClosestPoints:", err);
-    return res.status(500).json({
+    console.error("Erreur getClosestPoints:", err);
+    res.status(500).json({
       success: false,
-      message: "Erreur serveur lors de la récupération des points.",
+      message: "Erreur serveur",
       error: err.message,
-      points: [],
-      count: 0
     });
   }
 };
 
-
-// suppression en masse des points
 export const deleteMultiplePoints = async (req, res) => {
   try {
     const { ids } = req.body;
@@ -526,8 +577,7 @@ export const deleteMultiplePoints = async (req, res) => {
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "Aucun ID fourni." });
     }
-
-    const result = await Point.deleteMany({ _id: { $in: ids } });
+      const result = await Point.deleteMany({ publicId: { $in: ids } });
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: "Aucun point trouvé à supprimer." });
@@ -542,4 +592,3 @@ export const deleteMultiplePoints = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur.", error: err.message });
   }
 };
-

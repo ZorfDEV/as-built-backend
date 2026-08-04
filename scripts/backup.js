@@ -13,7 +13,8 @@ const backupDir = path.join(
 );
 
 // Commande mongodump
-const command = `mongodump --db=${dbName} --out="${backupDir}"`;
+//const command = `mongodump --db=${dbName} --out="${backupDir}"`;
+const command = `mongodump --db=${dbName} --username admin --password ChangeMe2024! --authenticationDatabase admin --out="${backupDir}"`
 
 // Exécution
 exec(command, (error, stdout, stderr) => {
@@ -27,3 +28,6 @@ exec(command, (error, stdout, stderr) => {
   }
   console.log(`✅ Sauvegarde réussie dans: ${backupDir}`);
 });
+
+
+

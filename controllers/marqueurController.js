@@ -35,21 +35,37 @@ export const createMarqueur = async (req, res) => {
   }
 };
 
-
 export const getMarqueurById = async (req, res) => {
-  const marqueur = await Marqueur.findById(req.params.id);
-  res.json(marqueur);
+  try {
+    const marqueur = await Marqueur.findById(req.resourceId);
+    res.json(marqueur);
+  } catch (error) {
+    console.error('Erreur getMarqueurById:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 };
 
 export const updateMarqueur = async (req, res) => {
-  const updated = await Marqueur.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.json(updated);
+  try {
+    const updated = await Marqueur.findByIdAndUpdate(req.resourceId, req.body, { new: true });
+    res.json(updated);
+  } catch (error) {
+    console.error('Erreur updateMarqueur:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 };
 
 export const deleteMarqueur = async (req, res) => {
-  await Marqueur.findByIdAndDelete(req.params.id);
-  res.status(204).end();
+  try {
+    
+    await Marqueur.findByIdAndDelete(req.resourceId);
+    res.status(204).end();
+  } catch (error) {
+    console.error('Erreur deleteMarqueur:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 };
+
 export const deleteMultipleMarqueurs = async (req, res) => {
   const { ids } = req.body; // Attendre un tableau d'IDs dans le corps de la requête
 

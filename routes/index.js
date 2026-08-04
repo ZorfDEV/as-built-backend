@@ -5,6 +5,7 @@ import sectionRoutes from './sectionRoutes.js';
 import marqueurRoutes from './marqueurRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
 import authRoutes from './authRoutes.js';
+import portsRoutes from './portsRoutes.js'
 
 const router = express.Router();
 

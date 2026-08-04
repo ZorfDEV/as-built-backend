@@ -1,7 +1,6 @@
-// File: /backend/models/User.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-
+import publicIdPlugin from './plugins/publicId.js';  // ✅ import
 
 const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
@@ -16,10 +15,12 @@ const UserSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["actived", "pending", "inactived"],
-    default: "inactived",  
+    enum: ["actived", "pending", "inactive"],
+    default: "inactive",  
   }
 }, { timestamps: true });
+
+UserSchema.plugin(publicIdPlugin);  // ✅ ajoute publicId
 
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

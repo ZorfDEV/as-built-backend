@@ -60,31 +60,53 @@ export const getSectionsWithPoints = async (req, res) => {
   }
 };
 
-
 export const getSectionById = async (req, res) => {
-  const sectionId = req.params.id;
-  if (!sectionId) return res.status(400).json({ error: 'ID de section manquant' });
-  const section = await Section.findById(sectionId);
-  if (!section) return res.status(404).json({ error: 'Section introuvable' });
-    const points = await Point.find({ section_id: sectionId });
-  if (!points) return res.status(404).json({ error: 'Aucun point trouvé pour cette section' });
-  const marqueurs = await Marqueur.find();
+  try {
+    // ✅ req.resourceId vient du middleware resolveByPublicId
+    const sectionId = req.resourceId;
 
-   res.json({ section, points, marqueurs });
+    const section = await Section.findById(sectionId);
+    if (!section) return res.status(404).json({ error: 'Section introuvable' });
+
+    const points = await Point.find({ section_id: sectionId });
+    if (!points) return res.status(404).json({ error: 'Aucun point trouvé pour cette section' });
+
+    const marqueurs = await Marqueur.find();
+
+    res.json({ section, points, marqueurs });
+  } catch (error) {
+    console.error('Erreur getSectionById:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 };
 
 export const updateSection = async (req, res) => {
-  const errors = validationResult(req);
-  
-  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-  const updated = await Section.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.json(updated);
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    // ✅ req.resourceId vient du middleware resolveByPublicId
+    const updated = await Section.findByIdAndUpdate(req.resourceId, req.body, { new: true });
+    res.json(updated);
+  } catch (error) {
+    console.error('Erreur updateSection:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 };
 
 export const deleteSection = async (req, res) => {
-  await Section.findByIdAndDelete(req.params.id);
-  res.status(200).end();
+  try {
+    // ✅ req.resourceId vient du middleware resolveByPublicId
+    await Section.findByIdAndDelete(req.resourceId);
+    res.status(200).end();
+  } catch (error) {
+    console.error('Erreur deleteSection:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 };
+
+
+
 export const getSectionsByUserId = async (req, res) => {
   const sections = await Section.find({ user_id: req.user.id });
   res.json(sections);
@@ -97,7 +119,7 @@ export const deleteMultipleSections = async (req, res) => {
       return res.status(400).json({ message: "Aucun ID fourni." });
     }
 
-    const result = await Section.deleteMany({ _id: { $in: ids } });
+    const result = await Section.deleteMany({ publicId: { $in: ids } });
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: "Aucune section trouvée à supprimer." });

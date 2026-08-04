@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import publicIdPlugin from './plugins/publicId.js';  // ✅ import
 
 const PointSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -14,25 +15,23 @@ const PointSchema = new mongoose.Schema({
   },
   nature: { 
     type: String, 
-    enum: ["pt-asbuilt", "incident","chambre","borne-réperage"], 
+    enum: ["gare", "incident","chambre","borne-réperage;=","CT","signalisation","pt-asbuilt"], 
     default: "pt-asbuilt" 
   },
   location: {
     type: { type: String, enum: ["Point"], default: "Point" },
     coordinates: {
-      type: [Number], // [longitude, latitude]
+      type: [Number],
       required: false,
     },
   },
-
-  // dates totalement contrôlables
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 });
 
-// Mise à jour auto de updatedAt
+PointSchema.plugin(publicIdPlugin);  // ✅ ajoute publicId
+
 PointSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();

@@ -1,0 +1,105 @@
+{   "testUrl":"http://10.1.28.35/api/v0/alert_log/?device_id=248&entity_id=38322&username=LBV&password=LBV",
+	"status": "ok",
+	"count": 8,
+	"entries": [
+		{
+			"event_id": "1327415",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-24 10:38:48",
+			"message": "Recovery notification sent",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "RECOVER_NOTIFY",
+			"notified": "1",
+			"log_state": null
+		},
+		{
+			"event_id": "1327410",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-24 10:38:47",
+			"message": "Checks succeeded",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "OK",
+			"notified": "0",
+			"log_state": "{\"metrics\":{\"ifAdminStatus\":\"up\",\"ifOperStatus\":\"up\"},\"failed\":[{\"metric\":\"ifAdminStatus\",\"condition\":\"equals\",\"value\":\"up\"}],\"previous_last_ok\":1784873327}"
+		},
+		{
+			"event_id": "1327325",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-24 08:13:57",
+			"message": "Alert notification sent",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "ALERT_NOTIFY",
+			"notified": "1",
+			"log_state": null
+		},
+		{
+			"event_id": "1327320",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-24 08:13:55",
+			"message": "Checks failed",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "FAIL",
+			"notified": "0",
+			"log_state": "{\"metrics\":{\"ifAdminStatus\":\"up\",\"ifOperStatus\":\"down\"},\"failed\":[{\"metric\":\"ifAdminStatus\",\"condition\":\"equals\",\"value\":\"up\"},{\"metric\":\"ifOperStatus\",\"condition\":\"equals\",\"value\":\"down\"}],\"previous_last_ok\":1784873327}"
+		},
+		{
+			"event_id": "1316877",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-11 09:18:45",
+			"message": "Recovery notification sent",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "RECOVER_NOTIFY",
+			"notified": "1",
+			"log_state": null
+		},
+		{
+			"event_id": "1316872",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-11 09:18:43",
+			"message": "Checks succeeded",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "OK",
+			"notified": "0",
+			"log_state": "{\"metrics\":{\"ifAdminStatus\":\"up\",\"ifOperStatus\":\"up\"},\"failed\":[{\"metric\":\"ifAdminStatus\",\"condition\":\"equals\",\"value\":\"up\"}],\"previous_last_ok\":1783730769}"
+		},
+		{
+			"event_id": "1316748",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-11 02:53:46",
+			"message": "Alert notification sent",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "ALERT_NOTIFY",
+			"notified": "1",
+			"log_state": null
+		},
+		{
+			"event_id": "1316743",
+			"alert_test_id": "6",
+			"device_id": "248",
+			"timestamp": "2026-07-11 02:53:44",
+			"message": "Checks failed",
+			"entity_type": "port",
+			"entity_id": "38322",
+			"log_type": "FAIL",
+			"notified": "0",
+			"log_state": "{\"metrics\":{\"ifAdminStatus\":\"up\",\"ifOperStatus\":\"down\"},\"failed\":[{\"metric\":\"ifAdminStatus\",\"condition\":\"equals\",\"value\":\"up\"},{\"metric\":\"ifOperStatus\",\"condition\":\"equals\",\"value\":\"down\"}],\"previous_last_ok\":1783730769}"
+		}
+	],
+	"entity_cache": null,
+	"pageno": 1,
+	"pagesize": 50000
+}

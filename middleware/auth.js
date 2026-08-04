@@ -1,58 +1,144 @@
-// middleware/protect.js
-
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
+const isProd = process.env.NODE_ENV === "production";
+
+if (!process.env.JWT_SECRET && isProd) {
+  throw new Error("JWT_SECRET est obligatoire en production.");
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_key";
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure:   false,        // ✅ false en dev (HTTP)
+  sameSite: "lax",        // ✅ lax en dev
+  maxAge:   24 * 60 * 60 * 1000, // 1 jour
+  path:     "/",          // ✅ disponible sur toutes les routes
+};
 
 export default async function protect(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({ message: "Veuillez vous connecter" });
-    }
-
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Connexion invalide" });
-    }
-
-    const token = authHeader.split(" ")[1];
-
+    // ============================
+    // Lecture du cookie
+    // ============================
+    const token = req.cookies?.token;
     if (!token) {
-      return res.status(401).json({ message: "Veuillez vous connecter" });
+      return res.status(401).json({
+        message: "Veuillez vous connecter.",
+      });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // ============================
+    // Vérification du JWT
+    // ============================
+    let decoded;
 
-    const user = await User.findById(decoded.id).select("-password");
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      res.clearCookie("token", COOKIE_OPTIONS);
+
+      if (err.name === "TokenExpiredError") {
+        return res.status(401).json({
+          message: "Votre session a expiré.",
+        });
+      }
+
+      return res.status(401).json({
+        message: "Session invalide.",
+      });
+    }
+
+    // ============================
+    // Vérifie le contenu du token
+    // ============================
+    if (!decoded?.id) {
+      res.clearCookie("token", COOKIE_OPTIONS);
+
+      return res.status(401).json({
+        message: "Token invalide.",
+      });
+    }
+
+    // ============================
+    // Recherche utilisateur
+    // ============================
+    const user = await User.findById(decoded.id)
+      .select("-password")
+      .lean();
+    // console.log("Utilisateur trouvé :", user);
 
     if (!user) {
-      return res.status(401).json({ message: "Utilisateur introuvable" });
+      res.clearCookie("token", COOKIE_OPTIONS);
+
+      return res.status(401).json({
+        message: "Utilisateur introuvable.",
+      });
     }
 
+    // ============================
+    // Compte désactivé
+    // ============================
+    if (user.isActive === false) {
+      res.clearCookie("token", COOKIE_OPTIONS);
+
+      return res.status(403).json({
+        message: "Compte désactivé.",
+      });
+    }
+
+  //console.log("Decoded :", decoded);
     req.user = user;
 
     next();
   } catch (error) {
-    console.error("AUTH ERROR:", error.message);
+    console.error("AUTH ERROR:", error);
 
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token expiré" });
-    }
+    res.clearCookie("token", COOKIE_OPTIONS);
 
-    return res.status(403).json({ message: "Session invalide" });
+    return res.status(500).json({
+      message: "Erreur interne d'authentification.",
+    });
   }
 }
 
-// Middleware pour vérifier si l'utilisateur est un administrateur
+/**
+ * Middleware Admin
+ */
 export const admin = (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ message: 'Non authentifié' });
+    return res.status(401).json({
+      message: "Non authentifié.",
+    });
   }
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Accès refusé' });
+
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "Accès refusé. Rôle administrateur requis.",
+    });
   }
+
   next();
 };
 
+/**
+ * Middleware de rôles
+ */
+export const requireRole =
+  (...roles) =>
+  (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Non authentifié.",
+      });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: `Accès refusé. Rôle requis : ${roles.join(" ou ")}.`,
+      });
+    }
+
+    next();
+  };
