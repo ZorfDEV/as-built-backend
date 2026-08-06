@@ -15,7 +15,7 @@ const PointSchema = new mongoose.Schema({
   },
   nature: { 
     type: String, 
-    enum: ["gare", "incident","chambre","borne-réperage;=","CT","signalisation","pt-asbuilt"], 
+    enum: ["gare", "incident","chambre","borne-réperage;=","ct","signalisation","pt-asbuilt"], 
     default: "pt-asbuilt" 
   },
   location: {
