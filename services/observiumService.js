@@ -61,7 +61,8 @@ export async function getPortHistory(portId, deviceId, dateFrom, dateTo) {
   try {
     const from     = toUnixTimestamp(dateFrom);
     const to       = toUnixTimestampEndOfDay(dateTo);
-    const hostname = getDeviceHostname(deviceId);
+    //const hostname = getDeviceHostname(deviceId);
+    const hostname = devicesConfig.find((d) => d.device_id === deviceId)?.hostname;
     const { data } = await observiumApi.get(
       `/ports/${portId}/detail/from=${from}/to=${to}`,
       hostname ? { params: { hostname } } : {}
