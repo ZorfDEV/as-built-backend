@@ -13,8 +13,8 @@ router.get("/", async (req, res) => {
     const data = await buildReportData({ dateFrom, dateTo });
     res.json(data);
   } catch (err) {
-    console.log("Erreur rapport:", err.message);
-    res.status(500).json({ error: "Erreur lors de la génération du rapport" });
+    console.error("Erreur rapport:", err.message);
+    res.status(500).json({ error: `Erreur lors de la génération du rapport : ${err.message}` });
   }
 });
 
