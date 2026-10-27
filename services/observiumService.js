@@ -10,9 +10,19 @@ const observiumAuth = {
   password: process.env.API_OBSERVIUM_PASSWORD,
 };
 
-if (!observiumAuth.username || !observiumAuth.password) {
+const missingAuth = !observiumAuth.username || !observiumAuth.password;
+if (missingAuth) {
   console.warn("⚠️  API_OBSERVIUM_USERNAME / API_OBSERVIUM_PASSWORD manquants dans .env");
 }
+
+// Sans identifiants, chaque appel est un échec d'auth → Observium bloque l'IP (429).
+// On refuse donc l'appel avant de l'envoyer.
+const requireAuth = (config) => {
+  if (missingAuth) {
+    throw new Error("Identifiants Observium manquants (API_OBSERVIUM_USERNAME / API_OBSERVIUM_PASSWORD)");
+  }
+  return config;
+};
 
 const observiumApi = axios.create({
   baseURL: process.env.API_OBSERVIUM || "http://10.1.28.35/api/v0/",
@@ -25,6 +35,9 @@ const observiumApiGraph = axios.create({
   auth: observiumAuth,
   timeout: 30000,
 });
+
+observiumApi.interceptors.request.use(requireAuth);
+observiumApiGraph.interceptors.request.use(requireAuth);
 
 function toUnixTimestampEndOfDay(dateStr) {
   //return Math.floor(new Date(dateStr).getTime() / 1000) + 86399;
