@@ -3,24 +3,27 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { devicesConfig,devicesIdConfig } from "./../config/devices.js";
 
+// Auth Basic : Observium n'accepte plus username/password en query string.
+// ⚠️ OBSERVIUM_USER / OBSERVIUM_PASSWORD (.env = "operation") renvoient 401 → on utilise API_OBSERVIUM_*.
+const observiumAuth = {
+  username: process.env.API_OBSERVIUM_USERNAME,
+  password: process.env.API_OBSERVIUM_PASSWORD,
+};
+
+if (!observiumAuth.username || !observiumAuth.password) {
+  console.warn("⚠️  API_OBSERVIUM_USERNAME / API_OBSERVIUM_PASSWORD manquants dans .env");
+}
+
 const observiumApi = axios.create({
-  baseURL: process.env.OBSERVIUM_URL || "http://10.1.28.35/api/v0/",
-  authorization: `Bearer${process.env.OBSERVIUM_TOKEN}`|| "Wq9Ss6#z3%",
-  auth: {
-    username: "LBV", // process.env.OBSERVIUM_USER || "LBV"
-    password: "LBV", // process.env.OBSERVIUM_PASS || "LBV"
-  },
-  timeout: 10000,
+  baseURL: process.env.API_OBSERVIUM || "http://10.1.28.35/api/v0/",
+  auth: observiumAuth,
+  timeout: 30000,
 });
 
 const observiumApiGraph = axios.create({
-  baseURL: process.env.OBSERVIUM_GRAPH_URL || "http://10.1.28.35/api/graph.php",
-  authorization: `Bearer${process.env.OBSERVIUM_TOKEN}`|| "Wq9Ss6#z3%",
-  auth: {
-    username:  process.env.OBSERVIUM_USER || "LBV",
-    password:  process.env.OBSERVIUM_PASS || "LBV"
-  },
-  timeout: 10000,
+  baseURL: process.env.API_OBSERVIUM_GRAPH || "http://10.1.28.35/graph.php",
+  auth: observiumAuth,
+  timeout: 30000,
 });
 
 function toUnixTimestampEndOfDay(dateStr) {
@@ -42,16 +45,18 @@ export { observiumApi, observiumApiGraph, toUnixTimestamp, toUnixTimestampEndOfD
 
 //Statut temps réel d'un device
 export const getDeviceStatus = async () => {
-  const deviceId = devicesIdConfig
+  const deviceIds = devicesIdConfig
       .filter((d) => d.device_id)
       .map((d) => d.device_id);
-   try {
-  const { data } = await observiumApi.get(`/devices/?device_id=${deviceId}`);
- console.log(`Fetched device ${deviceId}:`, data?.devices  ?? "N/A");
-  return data?.devices ?? {};
-   } catch (error) {
-   // console.error(`Erreur device ${deviceId}:`, error.response?.status, error.response?.data);
-    return { deviceId, ports: [] }; // ne bloque pas les autres devices
+  try {
+    // L'API accepte une liste séparée par des virgules : device_id=19,95,...
+    const { data } = await observiumApi.get("/devices/", {
+      params: { device_id: deviceIds.join(",") },
+    });
+    return data?.devices ?? {};
+  } catch (error) {
+    console.error("Erreur getDeviceStatus:", error.response?.status, error.response?.data ?? error.message);
+    return {};
   }
 };
 
@@ -62,7 +67,7 @@ export async function getPortHistory(portId, deviceId, dateFrom, dateTo) {
     const from     = toUnixTimestamp(dateFrom);
     const to       = toUnixTimestampEndOfDay(dateTo);
     //const hostname = getDeviceHostname(deviceId);
-    const hostname = devicesConfig.find((d) => d.device_id === deviceId)?.hostname;
+    const hostname = devicesConfig.find((d) => d.device_id === String(deviceId))?.hostname;
     const { data } = await observiumApi.get(
       `/ports/${portId}/detail/from=${from}/to=${to}`,
       hostname ? { params: { hostname } } : {}
@@ -70,10 +75,65 @@ export async function getPortHistory(portId, deviceId, dateFrom, dateTo) {
     return data ?? {};
 
   } catch (err) {
-    console.error(`Erreur getPortHistory ${portId}:`, err.message);
+    console.error(`Erreur getPortHistory ${portId}:`, err.response?.status, err.message);
     return {};
   }
 }
+
+// ─── getAlertLogEntries ─────────────────────────────────────
+// dateFrom / dateTo au format "YYYY-MM-DD" (l'API ne filtre pas avec des timestamps Unix)
+export async function getAlertLogEntries(deviceId, entityId, dateFrom, dateTo) {
+  const pagesize   = 1000;
+  const allEntries = [];
+  let pageno = 1;
+
+  while (true) {
+    const { data } = await observiumApi.get("/alert_log/", {
+      params: {
+        device_id:      deviceId,
+        entity_type:    "port",
+        entity_id:      entityId,
+        timestamp_from: dateFrom,
+        timestamp_to:   dateTo,
+        pagesize,
+        pageno,
+      },
+    });
+
+    if (data?.status !== "ok") {
+      throw new Error(`alert_log API error: ${data?.message || "unknown error"}`);
+    }
+
+    const entries = Object.values(data.entries ?? {});
+    allEntries.push(...entries);
+
+    if (entries.length < pagesize) break;
+    pageno++;
+  }
+
+  return allEntries;
+}
+
+// Utilisé par metricsCollector.js
+// pagesize=5000 → erreur 500 côté Observium, on pagine par 1000
+export const getPorts = async () => {
+  const pagesize = 1000;
+  const allPorts = [];
+  let pageno = 1;
+
+  while (true) {
+    const { data } = await observiumApi.get("/ports/", {
+      params: { pagesize, pageno },
+    });
+    const ports = Object.values(data?.ports ?? {});
+    allPorts.push(...ports);
+
+    if (ports.length < pagesize) break;
+    pageno++;
+  }
+
+  return allPorts;
+};
 
 /* Données historiques bande passante d'un port sur une période
 export const getPortGraphData = async (portId, dateFrom, dateTo) => {

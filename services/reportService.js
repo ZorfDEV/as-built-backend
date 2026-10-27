@@ -1,62 +1,11 @@
 import XLSX from 'xlsx';
-import {getPortHistory,} from "./observiumService.js";
+import { getPortHistory, getAlertLogEntries } from "./observiumService.js";
 import { devicesConfig, manualLinksConfig } from "./../config/devices.js";
 import { resolveManualLinks } from "./neighbourService.js";
 
 
-async function fetchAllAlertLogEntries(deviceId, entityId, tsFrom, tsTo) {
-  const baseUrl = "http://10.1.28.35/api/v0/alert_log/";
-  const pagesize = 1000;
-  const allEntries = [];
-  let pageno = 1;
-
-  while (true) {
-    const params = new URLSearchParams({
-      device_id: deviceId,
-      entity_type: "port",
-      entity_id: entityId,
-      timestamp_from: tsFrom,
-      timestamp_to: tsTo,
-      pagesize: pagesize,
-      pageno: pageno,
-      username: "LBV",
-      password: "LBV",
-    });
-
-    const url = `${baseUrl}?${params.toString()}`;
-    //console.log("Url send", url);
-
-    let res;
-    try {
-      res = await fetch(url);
-    } catch (networkErr) {
-      throw new Error(`alert_log network error (page ${pageno}): ${networkErr.message}`);
-    }
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(
-        `alert_log request failed: ${res.status} ${res.statusText} (page ${pageno}) — ${body.slice(0, 300)}`
-      );
-    }
-
-    const data = await res.json();
-    if (data.status !== "ok") {
-      throw new Error(`alert_log API error: ${data.message || "unknown error"}`);
-    }
-
-    const entries = data?.entries;
-    allEntries.push(...entries);
-    console.log(`Fetched ${allEntries.length} entries (page ${pageno})`);
-
-    if (entries.length < pagesize) break;
-    pageno++;
-  }
-
-
-
-  return allEntries;
-}
+// Appel alert_log via observiumService (auth Basic, plus de credentials en query string)
+const fetchAllAlertLogEntries = getAlertLogEntries;
 
 function parseObserviumTimestamp(ts) {
   return new Date(ts.replace(" ", "T") + "Z").getTime();
